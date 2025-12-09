@@ -428,47 +428,66 @@
       // ページ入力の初期値
       pageJumpInput.value = String(currentPage);
 
-      const doubleMode = isDoublePageMode();
-const isCover = (currentPage === 1);
-// 裏表紙単ページも将来的にやりたければここで true 条件増やす
-// const isBackCover = (currentPage === ISSUE_CONFIG.totalPages);
+const doubleMode = isDoublePageMode();
+const isCover      = (currentPage === 1);
+const isBackCover  = (currentPage === ISSUE_CONFIG.totalPages);
 
-const useDouble = doubleMode && !isCover;
+// 表紙 / 裏表紙でも「見開きと同じレイアウト」で、片側を空白にする
+const useDouble = doubleMode;
 
-modeBadgeText.textContent = useDouble ? "2ページ見開き" : "1ページ表示";
-
-// ページ要素を作り直す
+// 作り直し
 pageWrapper.innerHTML = "";
-
 const inner = document.createElement("div");
 inner.className = "page-wrapper-inner";
 
-// 右側（論理上「右ページ」）＝ currentPage
-const rightFrame = document.createElement("div");
-rightFrame.className = "page-frame";
-const rightImg = document.createElement("img");
-rightImg.className = "page-image";
-rightImg.alt = "Page " + currentPage;
-rightImg.src = getPageUrl(currentPage);
-rightFrame.appendChild(rightImg);
-inner.appendChild(rightFrame);
+// ★ FRAME1（右側＝currentPage）
+const frameRight = document.createElement("div");
+frameRight.className = "page-frame";
 
-// 左側（見開き時のもう1ページ）
+const imgRight = document.createElement("img");
+imgRight.className = "page-image";
+imgRight.alt = "Page " + currentPage;
+imgRight.src = getPageUrl(currentPage);
+
+// 表紙は右側のみ
+if (!isCover) {
+  frameRight.appendChild(imgRight);
+} else {
+  // 表紙の右側は普通に表示
+  frameRight.appendChild(imgRight);
+}
+
+// ★ FRAME2（左側＝currentPage+1 か空白）
+const frameLeft = document.createElement("div");
+frameLeft.className = "page-frame";
+
 if (useDouble) {
-  const leftPage = currentPage + 1;
-  if (leftPage <= ISSUE_CONFIG.totalPages) {
-    const leftFrame = document.createElement("div");
-    leftFrame.className = "page-frame";
-    const leftImg = document.createElement("img");
-    leftImg.className = "page-image";
-    leftImg.alt = "Page " + leftPage;
-    leftImg.src = getPageUrl(leftPage);
-    leftFrame.appendChild(leftImg);
-    inner.appendChild(leftFrame);
+  if (isCover) {
+    // 表紙 → 左側は空白
+    // 何も入れない
+  } else if (isBackCover) {
+    // 裏表紙 → 左側に裏表紙を置いて右側を空白にしたいので swap
+    frameRight.innerHTML = "";
+    frameRight.appendChild(imgRight); // 右側を裏表紙に
+
+    // 左側は空白のまま  
+    // 必要に応じて frameLeft.innerHTML = ""; のまま
+  } else {
+    const nextPage = currentPage + 1;
+    if (nextPage <= ISSUE_CONFIG.totalPages) {
+      const imgLeft = document.createElement("img");
+      imgLeft.className = "page-image";
+      imgLeft.alt = "Page " + nextPage;
+      imgLeft.src = getPageUrl(nextPage);
+      frameLeft.appendChild(imgLeft);
+    }
   }
 }
 
+inner.appendChild(frameRight); // 右
+inner.appendChild(frameLeft);  // 左
 pageWrapper.appendChild(inner);
+
 
 
       pageWrapper.appendChild(inner);
@@ -499,12 +518,12 @@ pageWrapper.appendChild(inner);
     // ============================
     // ★ 縦書き右→左用：左側の「前へ」ボタンでページを進める
 prevBtn.addEventListener("click", () => {
-  goNext();  // ラベルは「前へ」だけど、ページ番号は進む
+  goPrev();  // ラベルは「前へ」だけど、ページ番号は進む
 });
 
 // ★ 右側の「次へ」ボタンでページを戻る
 nextBtn.addEventListener("click", () => {
-  goPrev();
+  goNext();
 });
 
 
@@ -605,21 +624,23 @@ nextBtn.addEventListener("click", () => {
 // ============================
 if (pageWrapperOuter) {
   pageWrapperOuter.addEventListener("click", (e) => {
-    // 画像の上でのクリックだけ拾いたいので、
-    // 変な要素なら無視してもよい（今の構成ならそのままでOK）
-    const rect = pageWrapperOuter.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const mid = rect.width / 2;
+  const rect = pageWrapperOuter.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const w = rect.width;
 
-    // 左半分クリック → ページを進める
-    if (x < mid) {
-      goNext();
-    }
-    // 右半分クリック → ページを戻す
-    else {
-      goPrev();
-    }
-  });
+  const leftZone  = w * 0.20;   // 左20%
+  const rightZone = w * 0.80;   // 右20%
+
+  if (x < leftZone) {
+    goNext();   // 左側タップ → 次へ（縦書き右開き）
+  } else if (x > rightZone) {
+    goPrev();   // 右側タップ → 前へ
+  } else {
+    // 中央 60% は無反応
+    console.log("中央ゾーン（無反応）");
+  }
+});
+
 }
 
 
