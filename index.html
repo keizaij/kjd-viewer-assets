@@ -254,6 +254,49 @@
       }
     }
 
+/* 画面端の縦長ナビボタン */
+.page-nav-overlay {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;         /* 横幅細め */
+  height: 60%;         /* 縦長 */
+  border: none;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.65); /* 半透明ダーク */
+  color: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  cursor: pointer;
+  z-index: 30;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.8),
+              0 8px 24px rgba(0,0,0,0.7);
+  transition: background 0.15s ease, opacity 0.15s ease, transform 0.1s ease;
+  opacity: 0;
+  pointer-events: none;   /* 非表示時はクリックされないように */
+}
+
+.page-nav-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.page-nav-prev {
+  left: 8px;
+}
+
+.page-nav-next {
+  right: 8px;
+}
+
+.page-nav-overlay:hover {
+  background: rgba(37, 99, 235, 0.85);
+  transform: translateY(-50%) scale(1.03);
+}
+
+
     .visually-hidden {
       position: absolute;
       width: 1px;
@@ -337,7 +380,7 @@
   subtitle: "2025年12月8日号",
 
   // 合計ページ数（実際の枚数に合わせて調整）
-  totalPages: 22,
+  totalPages: 24,
 
   // 画像ファイル格納パス（issues/weekly/2169/001.webp など）
   // ※ここは「先頭スラッシュなし」「末尾スラッシュなし」にしておく
@@ -380,6 +423,43 @@
     const zoomOutBtn = document.getElementById("zoomOutBtn");
     const zoomResetBtn = document.getElementById("zoomResetBtn");
 
+// 画面端クリック用：外側コンテナ
+const pageWrapperOuter = document.querySelector(".page-wrapper-outer");
+
+// ナビボタン用の状態
+let navButtonsVisible = false;
+
+// ナビボタンDOMを作成
+const navPrevOverlay = document.createElement("button");
+navPrevOverlay.type = "button";
+navPrevOverlay.className = "page-nav-overlay page-nav-prev";
+navPrevOverlay.innerHTML = "◀";
+
+const navNextOverlay = document.createElement("button");
+navNextOverlay.type = "button";
+navNextOverlay.className = "page-nav-overlay page-nav-next";
+navNextOverlay.innerHTML = "▶";
+
+// outer に乗せる
+if (pageWrapperOuter) {
+  pageWrapperOuter.appendChild(navPrevOverlay);
+  pageWrapperOuter.appendChild(navNextOverlay);
+}
+
+// 表示・非表示用ヘルパー
+function showNavButtons() {
+  if (!pageWrapperOuter) return;
+  navButtonsVisible = true;
+  navPrevOverlay.classList.add("show");
+  navNextOverlay.classList.add("show");
+}
+
+function hideNavButtons() {
+  navButtonsVisible = false;
+  navPrevOverlay.classList.remove("show");
+  navNextOverlay.classList.remove("show");
+}
+
     // ============================
     // ユーティリティ
     // ============================
@@ -415,83 +495,96 @@
       zoomDisplay.textContent = Math.round(zoom * 100) + "%";
     }
 
-    // ============================
-    // 描画処理
-    // ============================
-    function renderViewer() {
-      // ヘッダ表示
-      viewerTitleMain.textContent = ISSUE_CONFIG.title || "電子書籍ビューア";
-      viewerTitleSub.textContent = ISSUE_CONFIG.subtitle || "";
-      viewerPageInfo.textContent =
-        "Page " + currentPage + " / " + ISSUE_CONFIG.totalPages;
+// ============================
+// 描画処理
+// ============================
+function renderViewer() {
+  // ヘッダ表示
+  viewerTitleMain.textContent = ISSUE_CONFIG.title || "電子書籍ビューア";
+  viewerTitleSub.textContent = ISSUE_CONFIG.subtitle || "";
+  viewerPageInfo.textContent =
+    "Page " + currentPage + " / " + ISSUE_CONFIG.totalPages;
 
-      // ページ入力の初期値
-      pageJumpInput.value = String(currentPage);
+  // ページ入力の初期値
+  pageJumpInput.value = String(currentPage);
 
-const doubleMode = isDoublePageMode();
-const isCover      = (currentPage === 1);
-const isBackCover  = (currentPage === ISSUE_CONFIG.totalPages);
+  const doubleMode  = isDoublePageMode();
+  const isCover     = (currentPage === 1);
+  const isBackCover = (currentPage === ISSUE_CONFIG.totalPages);
 
-// 表紙 / 裏表紙でも「見開きと同じレイアウト」で、片側を空白にする
-const useDouble = doubleMode;
+  const total = ISSUE_CONFIG.totalPages;
 
-// 作り直し
-pageWrapper.innerHTML = "";
-const inner = document.createElement("div");
-inner.className = "page-wrapper-inner";
+  // モード表示バッジ
+  modeBadgeText.textContent = doubleMode ? "2ページ見開き" : "1ページ表示";
 
-// ★ FRAME1（右側＝currentPage）
-const frameRight = document.createElement("div");
-frameRight.className = "page-frame";
+  // 中身作り直し
+  pageWrapper.innerHTML = "";
+  const inner = document.createElement("div");
+  inner.className = "page-wrapper-inner";
 
-const imgRight = document.createElement("img");
-imgRight.className = "page-image";
-imgRight.alt = "Page " + currentPage;
-imgRight.src = getPageUrl(currentPage);
+  if (!doubleMode) {
+    // ▽ 単ページモード：常に1ページだけセンター表示
+    const frame = document.createElement("div");
+    frame.className = "page-frame";
 
-// 表紙は右側のみ
-if (!isCover) {
-  frameRight.appendChild(imgRight);
-} else {
-  // 表紙の右側は普通に表示
-  frameRight.appendChild(imgRight);
-}
+    const img = document.createElement("img");
+    img.className = "page-image";
+    img.alt = "Page " + currentPage;
+    img.src = getPageUrl(currentPage);
 
-// ★ FRAME2（左側＝currentPage+1 か空白）
-const frameLeft = document.createElement("div");
-frameLeft.className = "page-frame";
-
-if (useDouble) {
-  if (isCover) {
-    // 表紙 → 左側は空白
-    // 何も入れない
-  } else if (isBackCover) {
-    // 裏表紙 → 左側に裏表紙を置いて右側を空白にしたいので swap
-    frameRight.innerHTML = "";
-    frameRight.appendChild(imgRight); // 右側を裏表紙に
-
-    // 左側は空白のまま  
-    // 必要に応じて frameLeft.innerHTML = ""; のまま
+    frame.appendChild(img);
+    inner.appendChild(frame);
   } else {
-    const nextPage = currentPage + 1;
-    if (nextPage <= ISSUE_CONFIG.totalPages) {
+    // ▽ 見開きモード：左／右フレームを用意
+    const frameLeft  = document.createElement("div");
+    const frameRight = document.createElement("div");
+    frameLeft.className  = "page-frame";
+    frameRight.className = "page-frame";
+
+    if (isCover) {
+      // ★ 表紙 → 右ページだけ表示（左は空白）
+      const imgRight = document.createElement("img");
+      imgRight.className = "page-image";
+      imgRight.alt = "Page 1";
+      imgRight.src = getPageUrl(1);
+      frameRight.appendChild(imgRight);
+
+      // frameLeft は何も入れない（白紙）
+    } else if (isBackCover) {
+      // ★ 裏表紙 → 左ページだけ表示（右は空白）
       const imgLeft = document.createElement("img");
       imgLeft.className = "page-image";
-      imgLeft.alt = "Page " + nextPage;
-      imgLeft.src = getPageUrl(nextPage);
+      imgLeft.alt = "Page " + total;
+      imgLeft.src = getPageUrl(total);
       frameLeft.appendChild(imgLeft);
+
+      // frameRight は何も入れない（白紙）
+    } else {
+      // ★ 通常：currentPage / currentPage+1 を左右に
+      const imgLeft = document.createElement("img");
+      imgLeft.className = "page-image";
+      imgLeft.alt = "Page " + currentPage;
+      imgLeft.src = getPageUrl(currentPage);
+      frameLeft.appendChild(imgLeft);
+
+      const nextPage = currentPage + 1;
+      if (nextPage <= total) {
+        const imgRight = document.createElement("img");
+        imgRight.className = "page-image";
+        imgRight.alt = "Page " + nextPage;
+        imgRight.src = getPageUrl(nextPage);
+        frameRight.appendChild(imgRight);
+      }
     }
+
+    // flex の並び順どおり「左→右」で append
+    inner.appendChild(frameLeft);
+    inner.appendChild(frameRight);
   }
+
+  pageWrapper.appendChild(inner);
 }
 
-inner.appendChild(frameRight); // 右
-inner.appendChild(frameLeft);  // 左
-pageWrapper.appendChild(inner);
-
-
-
-      pageWrapper.appendChild(inner);
-    }
 
     // ============================
     // ページ移動
@@ -525,6 +618,19 @@ prevBtn.addEventListener("click", () => {
 nextBtn.addEventListener("click", () => {
   goNext();
 });
+
+
+// 三角オーバーレイ側のクリックでページ移動
+navPrevOverlay.addEventListener("click", (e) => {
+  e.stopPropagation();
+  goPrev();
+});
+
+navNextOverlay.addEventListener("click", (e) => {
+  e.stopPropagation();
+  goNext();
+});
+
 
 
     zoomInBtn.addEventListener("click", () => {
@@ -619,28 +725,36 @@ nextBtn.addEventListener("click", () => {
     })();
 
 
-// ============================
-// 画像クリックでページ送り（左右で方向を分ける）
-// ============================
 if (pageWrapperOuter) {
   pageWrapperOuter.addEventListener("click", (e) => {
-  const rect = pageWrapperOuter.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const w = rect.width;
+    const rect = pageWrapperOuter.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const w = rect.width;
 
-  const leftZone  = w * 0.20;   // 左20%
-  const rightZone = w * 0.80;   // 右20%
+    // 1ページ分の1/18 を「端領域」として使う
+    const edgeWidth = w / 18;
 
-  if (x < leftZone) {
-    goNext();   // 左側タップ → 次へ（縦書き右開き）
-  } else if (x > rightZone) {
-    goPrev();   // 右側タップ → 前へ
-  } else {
-    // 中央 60% は無反応
-    console.log("中央ゾーン（無反応）");
-  }
-});
+    // すでにボタンが出ている状態でのクリック
+    if (navButtonsVisible) {
+      // 三角ボタン以外をクリック → ボタンを消すだけ
+      if (!e.target.closest(".page-nav-overlay")) {
+        hideNavButtons();
+      }
+      return;
+    }
 
+    // まだボタンが出ていない状態：
+    // 左端 or 右端の狭い範囲をクリックしたら、ボタンを出す
+    const isLeftEdge  = (x <= edgeWidth);
+    const isRightEdge = (x >= w - edgeWidth);
+
+    if (isLeftEdge || isRightEdge) {
+      showNavButtons();
+      // 1回目のクリックではページ移動しない
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
 }
 
 
