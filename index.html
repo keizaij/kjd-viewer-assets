@@ -331,27 +331,28 @@
     // ★ とりあえず「1つの号」の設定をここにベタ書きしておいて、
     //   後で /config/*.json から読み込む形に差し替え予定。
     const ISSUE_CONFIG = {
-      // 画面左上のタイトル表示
-      title: "2025年12月8日号",
-      subtitle: "週刊最新号（サンプル）",
+  // 画面左上のタイトル表示（お好みで変更OK）
+  title: "第2169号",
+  subtitle: "2025年12月8日号",
 
-      // 合計ページ数
-      totalPages: 22,
+  // 合計ページ数（実際の枚数に合わせて調整）
+  totalPages: 22,
 
-      // 画像ファイル格納パス（Cloudflare Pages 上）
-      // 例: /issues/weekly/2025-12-08/page-001.webp
-      basePath: "/issues/weekly/2025-12-08",
+  // 画像ファイル格納パス（issues/weekly/2169/001.webp など）
+  // ※ここは「先頭スラッシュなし」「末尾スラッシュなし」にしておく
+  basePath: "issues/weekly/2169",
 
-      // ファイル名のパターン
-      // {num} にはゼロ埋め済みのページ番号が入る
-      filePattern: "page-{num}.webp",
+  // ファイル名のパターン
+  // {num} → 001, 002, 003 ... の部分
+  filePattern: "{num}.webp",
 
-      // ゼロ埋め桁数（001, 002 ... 010 ...）
-      zeroPad: 3,
+  // ゼロ埋め桁数（001, 002 ... なら 3）
+  zeroPad: 3,
 
-      // 初期ページ
-      startPage: 1
-    };
+  // 初期ページ
+  startPage: 1
+};
+
 
     // ============================
     // 状態管理
