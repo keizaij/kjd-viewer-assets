@@ -98,6 +98,7 @@
       transition: transform 0.15s ease-out;
       justify-content: center;
       align-items: flex-start;
+      flex-direction: row-reverse;
     }
 
     .page-frame {
@@ -365,6 +366,7 @@
     const ZOOM_STEP = 0.1;
 
     const pageWrapper = document.getElementById("pageWrapper");
+    const pageWrapperOuter = document.querySelector(".page-wrapper-outer");
     const viewerTitleMain = document.getElementById("viewerTitleMain");
     const viewerTitleSub = document.getElementById("viewerTitleSub");
     const viewerPageInfo = document.getElementById("viewerPageInfo");
@@ -427,38 +429,47 @@
       pageJumpInput.value = String(currentPage);
 
       const doubleMode = isDoublePageMode();
-      modeBadgeText.textContent = doubleMode ? "2ページ見開き" : "1ページ表示";
+const isCover = (currentPage === 1);
+// 裏表紙単ページも将来的にやりたければここで true 条件増やす
+// const isBackCover = (currentPage === ISSUE_CONFIG.totalPages);
 
-      // ページ要素を作り直す
-      pageWrapper.innerHTML = "";
+const useDouble = doubleMode && !isCover;
 
-      const inner = document.createElement("div");
-      inner.className = "page-wrapper-inner";
+modeBadgeText.textContent = useDouble ? "2ページ見開き" : "1ページ表示";
 
-      // 左ページ（常に currentPage）
-      const leftFrame = document.createElement("div");
-      leftFrame.className = "page-frame";
-      const leftImg = document.createElement("img");
-      leftImg.className = "page-image";
-      leftImg.alt = "Page " + currentPage;
-      leftImg.src = getPageUrl(currentPage);
-      leftFrame.appendChild(leftImg);
-      inner.appendChild(leftFrame);
+// ページ要素を作り直す
+pageWrapper.innerHTML = "";
 
-      // 右ページ（見開きモードのときだけ）
-      if (doubleMode) {
-        const rightPage = currentPage + 1;
-        if (rightPage <= ISSUE_CONFIG.totalPages) {
-          const rightFrame = document.createElement("div");
-          rightFrame.className = "page-frame";
-          const rightImg = document.createElement("img");
-          rightImg.className = "page-image";
-          rightImg.alt = "Page " + rightPage;
-          rightImg.src = getPageUrl(rightPage);
-          rightFrame.appendChild(rightImg);
-          inner.appendChild(rightFrame);
-        }
-      }
+const inner = document.createElement("div");
+inner.className = "page-wrapper-inner";
+
+// 右側（論理上「右ページ」）＝ currentPage
+const rightFrame = document.createElement("div");
+rightFrame.className = "page-frame";
+const rightImg = document.createElement("img");
+rightImg.className = "page-image";
+rightImg.alt = "Page " + currentPage;
+rightImg.src = getPageUrl(currentPage);
+rightFrame.appendChild(rightImg);
+inner.appendChild(rightFrame);
+
+// 左側（見開き時のもう1ページ）
+if (useDouble) {
+  const leftPage = currentPage + 1;
+  if (leftPage <= ISSUE_CONFIG.totalPages) {
+    const leftFrame = document.createElement("div");
+    leftFrame.className = "page-frame";
+    const leftImg = document.createElement("img");
+    leftImg.className = "page-image";
+    leftImg.alt = "Page " + leftPage;
+    leftImg.src = getPageUrl(leftPage);
+    leftFrame.appendChild(leftImg);
+    inner.appendChild(leftFrame);
+  }
+}
+
+pageWrapper.appendChild(inner);
+
 
       pageWrapper.appendChild(inner);
     }
@@ -486,13 +497,16 @@
     // ============================
     // イベントハンドラ
     // ============================
-    prevBtn.addEventListener("click", () => {
-      goPrev();
-    });
+    // ★ 縦書き右→左用：左側の「前へ」ボタンでページを進める
+prevBtn.addEventListener("click", () => {
+  goNext();  // ラベルは「前へ」だけど、ページ番号は進む
+});
 
-    nextBtn.addEventListener("click", () => {
-      goNext();
-    });
+// ★ 右側の「次へ」ボタンでページを戻る
+nextBtn.addEventListener("click", () => {
+  goPrev();
+});
+
 
     zoomInBtn.addEventListener("click", () => {
       setZoom(zoom + ZOOM_STEP);
@@ -584,6 +598,30 @@
         { passive: true }
       );
     })();
+
+
+// ============================
+// 画像クリックでページ送り（左右で方向を分ける）
+// ============================
+if (pageWrapperOuter) {
+  pageWrapperOuter.addEventListener("click", (e) => {
+    // 画像の上でのクリックだけ拾いたいので、
+    // 変な要素なら無視してもよい（今の構成ならそのままでOK）
+    const rect = pageWrapperOuter.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const mid = rect.width / 2;
+
+    // 左半分クリック → ページを進める
+    if (x < mid) {
+      goNext();
+    }
+    // 右半分クリック → ページを戻す
+    else {
+      goPrev();
+    }
+  });
+}
+
 
     // ============================
     // 初期化
