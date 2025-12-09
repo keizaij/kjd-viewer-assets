@@ -109,13 +109,15 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      max-width: 100%;
+  /* ★ ここを追加／変更：常に左右が半々になるようにする */
+  flex: 1 1 0;
+  min-width: 0;
       max-height: calc(100vh - 180px);
     }
 
     .page-image {
       display: block;
-      max-width: 100%;
+      width: 100%;
       height: auto;
       background: #020617;
     }
