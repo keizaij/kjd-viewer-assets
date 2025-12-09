@@ -261,23 +261,23 @@
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 40px;         /* 横幅細め */
-  height: 60%;         /* 縦長 */
+  width: 26px;          /* ★ 40px → 26px に細くした */
+  height: 60%;
   border: none;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.65); /* 半透明ダーク */
+  background: rgba(15, 23, 42, 0.65);
   color: #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 18px;      /* 少しだけ小さく */
   cursor: pointer;
   z-index: 30;
   box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.8),
               0 8px 24px rgba(0,0,0,0.7);
   transition: background 0.15s ease, opacity 0.15s ease, transform 0.1s ease;
   opacity: 0;
-  pointer-events: none;   /* 非表示時はクリックされないように */
+  pointer-events: none;
 }
 
 .page-nav-overlay.show {
@@ -441,25 +441,45 @@ navNextOverlay.type = "button";
 navNextOverlay.className = "page-nav-overlay page-nav-next";
 navNextOverlay.innerHTML = "▶";
 
+
+
 // outer に乗せる
 if (pageWrapperOuter) {
   pageWrapperOuter.appendChild(navPrevOverlay);
   pageWrapperOuter.appendChild(navNextOverlay);
 }
 
-// 表示・非表示用ヘルパー
+
+
+let navHideTimer = null;
+
+function scheduleHideNavButtons(ms = 4000) {
+  if (navHideTimer) {
+    clearTimeout(navHideTimer);
+  }
+  navHideTimer = setTimeout(() => {
+    hideNavButtons();
+  }, ms);
+}
+
 function showNavButtons() {
   if (!pageWrapperOuter) return;
   navButtonsVisible = true;
   navPrevOverlay.classList.add("show");
   navNextOverlay.classList.add("show");
+  scheduleHideNavButtons();   // ★ 表示したら自動で消えるタイマー起動
 }
 
 function hideNavButtons() {
   navButtonsVisible = false;
   navPrevOverlay.classList.remove("show");
   navNextOverlay.classList.remove("show");
+  if (navHideTimer) {
+    clearTimeout(navHideTimer);
+    navHideTimer = null;
+  }
 }
+
 
     // ============================
     // ユーティリティ
@@ -622,14 +642,18 @@ nextBtn.addEventListener("click", () => {
 
 
 // 三角オーバーレイ側のクリックでページ移動
+// ★ 左側（prevクラス）＝「次へ」：縦書きなので右→左に進むイメージ
 navPrevOverlay.addEventListener("click", (e) => {
   e.stopPropagation();
-  goPrev();
+  goNext();              // ← ここを goNext に
+  scheduleHideNavButtons();
 });
 
+// ★ 右側（nextクラス）＝「前へ」に戻る
 navNextOverlay.addEventListener("click", (e) => {
   e.stopPropagation();
-  goNext();
+  goPrev();              // ← ここを goPrev に
+  scheduleHideNavButtons();
 });
 
 
@@ -732,8 +756,8 @@ if (pageWrapperOuter) {
     const x = e.clientX - rect.left;
     const w = rect.width;
 
-    // 1ページ分の1/18 を「端領域」として使う
-    const edgeWidth = w / 18;
+    // 1ページ分の1/20 を「端領域」として使う
+    const edgeWidth = w / 20;
 
     // すでにボタンが出ている状態でのクリック
     if (navButtonsVisible) {
