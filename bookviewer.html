@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>電子書籍ビューア（試作）</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --bg: #111827;
+      --panel-bg: #111827;
+      --accent: #3b82f6;
+      --accent-soft: #1f2937;
+      --fg: #e5e7eb;
+      --muted: #9ca3af;
+      --danger: #ef4444;
+      --zoom: 1;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      background: radial-gradient(circle at top, #1f2937, #020617);
+      color: var(--fg);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    .viewer-shell {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      background: rgba(15, 23, 42, 0.96);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    header.viewer-header {
+      padding: 10px 16px;
+      border-bottom: 1px solid #1f2937;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .viewer-title-main {
+      font-size: 16px;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+
+    .viewer-title-sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .viewer-page-info {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    main.viewer-main {
+      flex: 1;
+      background: radial-gradient(circle at top, #020617, #020617 40%, #000 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 8px;
+      overflow: hidden;
+    }
+
+    .page-wrapper-outer {
+      position: relative;
+      max-width: 100%;
+      max-height: 100%;
+      overflow: auto;
+      padding: 8px;
+    }
+
+    .page-wrapper-inner {
+      display: flex;
+      gap: 8px;
+      transform-origin: top center;
+      transform: scale(var(--zoom));
+      transition: transform 0.15s ease-out;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .page-frame {
+      background: #020617;
+      border-radius: 4px;
+      box-shadow: 0 0 0 1px #1e293b, 0 16px 40px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      max-width: 100%;
+      max-height: calc(100vh - 180px);
+    }
+
+    .page-image {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      background: #020617;
+    }
+
+    footer.viewer-controls {
+      padding: 8px 12px 10px;
+      border-top: 1px solid #1f2937;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .control-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #020617;
+      border-radius: 999px;
+      padding: 4px;
+    }
+
+    .control-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      padding: 0 6px;
+    }
+
+    button.ctrl-btn {
+      border: none;
+      outline: none;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #0b1120;
+      color: var(--fg);
+      cursor: pointer;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      min-width: 0;
+      transition: background 0.15s ease, transform 0.05s ease;
+    }
+
+    button.ctrl-btn span.icon {
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    button.ctrl-btn:hover {
+      background: #111827;
+    }
+
+    button.ctrl-btn:active {
+      transform: translateY(1px);
+    }
+
+    button.ctrl-btn.primary {
+      background: var(--accent);
+    }
+
+    button.ctrl-btn.primary:hover {
+      background: #2563eb;
+    }
+
+    button.ctrl-btn.danger {
+      background: #7f1d1d;
+    }
+
+    .zoom-display {
+      font-variant-numeric: tabular-nums;
+      font-size: 12px;
+      color: var(--muted);
+      min-width: 54px;
+      text-align: center;
+    }
+
+    .page-jump-input {
+      width: 60px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid #374151;
+      background: #020617;
+      color: var(--fg);
+      font-size: 12px;
+      text-align: center;
+      outline: none;
+    }
+
+    .page-jump-input:focus {
+      border-color: var(--accent);
+    }
+
+    .badge-mode {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--muted);
+      background: #020617;
+      border-radius: 999px;
+      padding: 4px 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+    }
+
+    @media (max-width: 768px) {
+      .viewer-shell {
+        border-radius: 0;
+        box-shadow: none;
+      }
+      header.viewer-header {
+        padding: 8px 10px;
+      }
+      main.viewer-main {
+        padding: 4px;
+      }
+      footer.viewer-controls {
+        padding: 6px 8px 8px;
+      }
+      .viewer-title-main {
+        font-size: 14px;
+      }
+      .viewer-page-info {
+        font-size: 11px;
+      }
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      border: 0;
+      clip: rect(0 0 0 0);
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div class="viewer-shell">
+    <header class="viewer-header">
+      <div>
+        <div class="viewer-title-main" id="viewerTitleMain">最新号ビューア</div>
+        <div class="viewer-title-sub" id="viewerTitleSub"></div>
+      </div>
+      <div class="viewer-page-info" id="viewerPageInfo">
+        Page ? / ?
+      </div>
+    </header>
+
+    <main class="viewer-main">
+      <div class="page-wrapper-outer">
+        <div class="page-wrapper-inner" id="pageWrapper" aria-live="polite">
+          <!-- ページ画像がここに差し込まれる -->
+        </div>
+      </div>
+    </main>
+
+    <footer class="viewer-controls">
+      <div class="control-group" aria-label="ページ移動">
+        <span class="control-label">PAGE</span>
+        <button class="ctrl-btn" id="prevBtn" type="button">
+          <span class="icon">⟵</span><span>前へ</span>
+        </button>
+        <button class="ctrl-btn primary" id="nextBtn" type="button">
+          <span>次へ</span><span class="icon">⟶</span>
+        </button>
+        <input
+          type="number"
+          min="1"
+          id="pageJumpInput"
+          class="page-jump-input"
+          title="ページ番号を入力して移動"
+        />
+      </div>
+
+      <div class="control-group" aria-label="ズーム">
+        <span class="control-label">ZOOM</span>
+        <button class="ctrl-btn" id="zoomOutBtn" type="button">
+          <span class="icon">−</span>
+        </button>
+        <div class="zoom-display" id="zoomDisplay">100%</div>
+        <button class="ctrl-btn" id="zoomInBtn" type="button">
+          <span class="icon">＋</span>
+        </button>
+        <button class="ctrl-btn" id="zoomResetBtn" type="button">
+          リセット
+        </button>
+      </div>
+
+      <div class="badge-mode" id="modeBadge">
+        <span class="badge-dot"></span>
+        <span id="modeBadgeText">1ページ表示</span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    // ============================
+    // 号ごとの設定
+    // ============================
+    // ★ とりあえず「1つの号」の設定をここにベタ書きしておいて、
+    //   後で /config/*.json から読み込む形に差し替え予定。
+    const ISSUE_CONFIG = {
+      // 画面左上のタイトル表示
+      title: "2025年12月8日号",
+      subtitle: "週刊最新号（サンプル）",
+
+      // 合計ページ数
+      totalPages: 22,
+
+      // 画像ファイル格納パス（Cloudflare Pages 上）
+      // 例: /issues/weekly/2025-12-08/page-001.webp
+      basePath: "/issues/weekly/2025-12-08",
+
+      // ファイル名のパターン
+      // {num} にはゼロ埋め済みのページ番号が入る
+      filePattern: "page-{num}.webp",
+
+      // ゼロ埋め桁数（001, 002 ... 010 ...）
+      zeroPad: 3,
+
+      // 初期ページ
+      startPage: 1
+    };
+
+    // ============================
+    // 状態管理
+    // ============================
+    let currentPage = ISSUE_CONFIG.startPage || 1;
+    let zoom = 1.0;
+
+    const MIN_ZOOM = 0.5;
+    const MAX_ZOOM = 2.0;
+    const ZOOM_STEP = 0.1;
+
+    const pageWrapper = document.getElementById("pageWrapper");
+    const viewerTitleMain = document.getElementById("viewerTitleMain");
+    const viewerTitleSub = document.getElementById("viewerTitleSub");
+    const viewerPageInfo = document.getElementById("viewerPageInfo");
+    const zoomDisplay = document.getElementById("zoomDisplay");
+    const modeBadgeText = document.getElementById("modeBadgeText");
+    const pageJumpInput = document.getElementById("pageJumpInput");
+
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const zoomInBtn = document.getElementById("zoomInBtn");
+    const zoomOutBtn = document.getElementById("zoomOutBtn");
+    const zoomResetBtn = document.getElementById("zoomResetBtn");
+
+    // ============================
+    // ユーティリティ
+    // ============================
+    function pad(num, size) {
+      let s = String(num);
+      while (s.length < size) s = "0" + s;
+      return s;
+    }
+
+    function getPageUrl(pageNum) {
+      const nn = pad(pageNum, ISSUE_CONFIG.zeroPad);
+      return (
+        ISSUE_CONFIG.basePath +
+        "/" +
+        ISSUE_CONFIG.filePattern.replace("{num}", nn)
+      );
+    }
+
+    function isDoublePageMode() {
+      // 画面幅が広いときは見開きモード
+      return window.innerWidth >= 900;
+    }
+
+    function clampPage(p) {
+      if (p < 1) return 1;
+      if (p > ISSUE_CONFIG.totalPages) return ISSUE_CONFIG.totalPages;
+      return p;
+    }
+
+    function setZoom(z) {
+      zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z));
+      document.documentElement.style.setProperty("--zoom", zoom);
+      zoomDisplay.textContent = Math.round(zoom * 100) + "%";
+    }
+
+    // ============================
+    // 描画処理
+    // ============================
+    function renderViewer() {
+      // ヘッダ表示
+      viewerTitleMain.textContent = ISSUE_CONFIG.title || "電子書籍ビューア";
+      viewerTitleSub.textContent = ISSUE_CONFIG.subtitle || "";
+      viewerPageInfo.textContent =
+        "Page " + currentPage + " / " + ISSUE_CONFIG.totalPages;
+
+      // ページ入力の初期値
+      pageJumpInput.value = String(currentPage);
+
+      const doubleMode = isDoublePageMode();
+      modeBadgeText.textContent = doubleMode ? "2ページ見開き" : "1ページ表示";
+
+      // ページ要素を作り直す
+      pageWrapper.innerHTML = "";
+
+      const inner = document.createElement("div");
+      inner.className = "page-wrapper-inner";
+
+      // 左ページ（常に currentPage）
+      const leftFrame = document.createElement("div");
+      leftFrame.className = "page-frame";
+      const leftImg = document.createElement("img");
+      leftImg.className = "page-image";
+      leftImg.alt = "Page " + currentPage;
+      leftImg.src = getPageUrl(currentPage);
+      leftFrame.appendChild(leftImg);
+      inner.appendChild(leftFrame);
+
+      // 右ページ（見開きモードのときだけ）
+      if (doubleMode) {
+        const rightPage = currentPage + 1;
+        if (rightPage <= ISSUE_CONFIG.totalPages) {
+          const rightFrame = document.createElement("div");
+          rightFrame.className = "page-frame";
+          const rightImg = document.createElement("img");
+          rightImg.className = "page-image";
+          rightImg.alt = "Page " + rightPage;
+          rightImg.src = getPageUrl(rightPage);
+          rightFrame.appendChild(rightImg);
+          inner.appendChild(rightFrame);
+        }
+      }
+
+      pageWrapper.appendChild(inner);
+    }
+
+    // ============================
+    // ページ移動
+    // ============================
+    function goToPage(p) {
+      currentPage = clampPage(p);
+      renderViewer();
+    }
+
+    function goNext() {
+      const doubleMode = isDoublePageMode();
+      const step = doubleMode ? 2 : 1;
+      goToPage(currentPage + step);
+    }
+
+    function goPrev() {
+      const doubleMode = isDoublePageMode();
+      const step = doubleMode ? 2 : 1;
+      goToPage(currentPage - step);
+    }
+
+    // ============================
+    // イベントハンドラ
+    // ============================
+    prevBtn.addEventListener("click", () => {
+      goPrev();
+    });
+
+    nextBtn.addEventListener("click", () => {
+      goNext();
+    });
+
+    zoomInBtn.addEventListener("click", () => {
+      setZoom(zoom + ZOOM_STEP);
+    });
+
+    zoomOutBtn.addEventListener("click", () => {
+      setZoom(zoom - ZOOM_STEP);
+    });
+
+    zoomResetBtn.addEventListener("click", () => {
+      setZoom(1.0);
+    });
+
+    pageJumpInput.addEventListener("change", () => {
+      const v = parseInt(pageJumpInput.value, 10);
+      if (!isNaN(v)) {
+        goToPage(v);
+      }
+    });
+
+    // キーボード操作
+    window.addEventListener("keydown", (e) => {
+      if (e.defaultPrevented) return;
+      switch (e.key) {
+        case "ArrowRight":
+        case "PageDown":
+          e.preventDefault();
+          goNext();
+          break;
+        case "ArrowLeft":
+        case "PageUp":
+          e.preventDefault();
+          goPrev();
+          break;
+        case "+":
+        case "=":
+          setZoom(zoom + ZOOM_STEP);
+          break;
+        case "-":
+        case "_":
+          setZoom(zoom - ZOOM_STEP);
+          break;
+        case "0":
+          setZoom(1.0);
+          break;
+      }
+    });
+
+    // ウィンドウサイズ変更時：1ページ/2ページ切り替え
+    window.addEventListener("resize", () => {
+      renderViewer();
+    });
+
+    // 簡易スワイプ対応（スマホ向け）
+    (function setupSwipe() {
+      let touchStartX = null;
+      let touchStartY = null;
+
+      pageWrapper.addEventListener(
+        "touchstart",
+        (e) => {
+          const t = e.touches[0];
+          touchStartX = t.clientX;
+          touchStartY = t.clientY;
+        },
+        { passive: true }
+      );
+
+      pageWrapper.addEventListener(
+        "touchend",
+        (e) => {
+          if (touchStartX == null || touchStartY == null) return;
+          const t = e.changedTouches[0];
+          const dx = t.clientX - touchStartX;
+          const dy = t.clientY - touchStartY;
+
+          // 横方向のスワイプが大きいときだけ
+          if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+            if (dx < 0) {
+              goNext();
+            } else {
+              goPrev();
+            }
+          }
+
+          touchStartX = null;
+          touchStartY = null;
+        },
+        { passive: true }
+      );
+    })();
+
+    // ============================
+    // 初期化
+    // ============================
+    function initFromQuery() {
+      // 将来的には ?issue=xxx や ?page=10 などをここで読む予定
+      const params = new URLSearchParams(window.location.search);
+      const pageParam = parseInt(params.get("page") || "", 10);
+      if (!isNaN(pageParam)) {
+        currentPage = clampPage(pageParam);
+      }
+
+      setZoom(1.0);
+      renderViewer();
+    }
+
+    window.addEventListener("load", initFromQuery);
+  </script>
+</body>
+</html>
