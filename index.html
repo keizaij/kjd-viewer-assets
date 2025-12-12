@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>電子書籍ビューア（試作）</title>
+  <title>電子書籍ビューア</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root {
@@ -615,17 +615,37 @@ function renderViewer() {
       renderViewer();
     }
 
-    function goNext() {
-      const doubleMode = isDoublePageMode();
-      const step = doubleMode ? 2 : 1;
-      goToPage(currentPage + step);
-    }
+function goNext() {
+  const doubleMode = isDoublePageMode();
 
-    function goPrev() {
-      const doubleMode = isDoublePageMode();
-      const step = doubleMode ? 2 : 1;
-      goToPage(currentPage - step);
-    }
+  // 見開きでも、表紙(1)の次だけは 2 を飛ばさない
+  if (doubleMode && currentPage === 1) {
+    goToPage(2);
+    return;
+  }
+
+  const step = doubleMode ? 2 : 1;
+  goToPage(currentPage + step);
+}
+
+function goPrev() {
+  const doubleMode = isDoublePageMode();
+
+  // 見開きで「2&3」を表示中（currentPage=2）から戻る時は +1 戻しで表紙へ
+  if (doubleMode && currentPage === 2) {
+    goToPage(1);
+    return;
+  }
+
+  const step = doubleMode ? 2 : 1;
+  goToPage(currentPage - step);
+}
+
+// 末尾が裏表紙（totalPages）の1つ手前なら +1 で最後へ
+if (doubleMode && currentPage === ISSUE_CONFIG.totalPages - 1) {
+  goToPage(ISSUE_CONFIG.totalPages);
+  return;
+}
 
     // ============================
     // イベントハンドラ
