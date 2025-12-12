@@ -641,11 +641,7 @@ function goPrev() {
   goToPage(currentPage - step);
 }
 
-// 末尾が裏表紙（totalPages）の1つ手前なら +1 で最後へ
-if (doubleMode && currentPage === ISSUE_CONFIG.totalPages - 1) {
-  goToPage(ISSUE_CONFIG.totalPages);
-  return;
-}
+
 
     // ============================
     // イベントハンドラ
