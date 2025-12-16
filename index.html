@@ -122,6 +122,36 @@
       background: #020617;
     }
 
+/* ====== 追記：スマホ横向き見切れ対策（上書き）====== */
+
+/* vhズレ対策：中身はそのまま、行を足すだけ */
+.viewer-shell{
+  min-height: 100dvh;
+}
+
+/* flex内の高さ計算が崩れないように */
+main.viewer-main{
+  min-height: 0;
+}
+
+/* 既存の max-height: calc(100vh - 180px); を無効化して、
+   “画面に収まる高さ” を d vh で作る */
+.page-frame{
+  max-height: none;
+  height: calc(100dvh - 180px);
+}
+
+/* width100% + height:auto だと横向きで縦が溢れて見切れやすいので
+   枠内に必ず収める */
+.page-image{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+
+
+
     footer.viewer-controls {
       padding: 8px 12px 10px;
       border-top: 1px solid #1f2937;
@@ -298,6 +328,23 @@
   transform: translateY(-50%) scale(1.03);
 }
 
+.viewer-back{
+  margin-left: auto;              /* 右寄せの起点にする */
+  text-decoration: none;
+  color: var(--fg);
+  background: #0b1120;
+  border: 1px solid #1f2937;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.viewer-page-info{
+  margin-left: 10px;              /* 戻るボタンと間隔 */
+}
+
+
 
     .visually-hidden {
       position: absolute;
@@ -318,6 +365,10 @@
         <div class="viewer-title-main" id="viewerTitleMain">最新号ビューア</div>
         <div class="viewer-title-sub" id="viewerTitleSub"></div>
       </div>
+
+<a class="viewer-back"  href="https://economic-journals-digital.web.app/index.html">会員ページへ戻る</a>
+
+
       <div class="viewer-page-info" id="viewerPageInfo">
         Page ? / ?
       </div>
@@ -499,10 +550,16 @@ function hideNavButtons() {
       );
     }
 
-    function isDoublePageMode() {
-      // 画面幅が広いときは見開きモード
-      return window.innerWidth >= 900;
-    }
+function isDoublePageMode() {
+  const w = window.innerWidth;
+  const landscape = window.matchMedia("(orientation: landscape)").matches;
+
+  // PCは従来通り、スマホ横は少し下げる
+  if (w >= 900) return true;
+  if (landscape && w >= 740) return true;   // ←ここはお好みで 700〜820 くらいで調整
+  return false;
+}
+
 
     function clampPage(p) {
       if (p < 1) return 1;
@@ -640,7 +697,6 @@ function goPrev() {
   const step = doubleMode ? 2 : 1;
   goToPage(currentPage - step);
 }
-
 
 
     // ============================
