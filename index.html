@@ -552,13 +552,18 @@ function hideNavButtons() {
 
 function isDoublePageMode() {
   const w = window.innerWidth;
-  const landscape = window.matchMedia("(orientation: landscape)").matches;
+  const h = window.innerHeight;
 
-  // PCは従来通り、スマホ横は少し下げる
-  if (w >= 900) return true;
-  if (landscape && w >= 740) return true;   // ←ここはお好みで 700〜820 くらいで調整
-  return false;
+  // ★スマホ横向きは強制見開き（iPad等も含めてOK）
+  const isLandscape = w > h;
+
+  // ★横向きなら常に見開き
+  if (isLandscape) return true;
+
+  // 縦向きは従来どおり（必要なら閾値調整）
+  return w >= 900;
 }
+
 
 
     function clampPage(p) {
